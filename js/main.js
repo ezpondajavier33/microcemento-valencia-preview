@@ -657,28 +657,56 @@
         pista.setAttribute('aria-activedescendant', el.id);
       }
 
+      // centro visible del carrusel, en coordenadas de pantalla
+      function centroVisible() {
+        var r = viewport.getBoundingClientRect();
+        return r.left + r.width / 2;
+      }
+
       // circulo cuyo centro queda mas cerca del centro visible
       function centrado() {
-        var centro = viewport.scrollLeft + viewport.clientWidth / 2;
+        var centro = centroVisible();
         var mejor = 0;
         var dist = Infinity;
         puntos.forEach(function (p, n) {
-          var d = Math.abs(p.offsetLeft + p.offsetWidth / 2 - centro);
+          var r = p.getBoundingClientRect();
+          var d = Math.abs(r.left + r.width / 2 - centro);
           if (d < dist) { dist = d; mejor = n; }
         });
         return mejor;
       }
 
+      // mientras dura un desplazamiento programado, el destino manda:
+      // si no, los avisos de scroll van pintando colores intermedios
+      var navegando = false;
+      var finViaje = null;
+
       function irA(i, suave) {
         i = Math.max(0, Math.min(puntos.length - 1, i));
-        var p = puntos[i];
-        var x = p.offsetLeft + p.offsetWidth / 2 - viewport.clientWidth / 2;
-        if (viewport.scrollTo) {
-          viewport.scrollTo({ left: x, behavior: suave === false || REDUCED ? 'auto' : 'smooth' });
-        } else {
-          viewport.scrollLeft = x;
-        }
+        var r = puntos[i].getBoundingClientRect();
+        var destino = viewport.scrollLeft + (r.left + r.width / 2 - centroVisible());
+        var instante = suave === false || REDUCED;
+
+        navegando = true;
         pintar(i);
+
+        if (viewport.scrollTo) {
+          viewport.scrollTo({ left: destino, behavior: instante ? 'auto' : 'smooth' });
+        } else {
+          viewport.scrollLeft = destino;
+        }
+
+        clearTimeout(finViaje);
+        finViaje = setTimeout(function () {
+          navegando = false;
+          // por si el anclaje ha dejado el carro medio circulo desviado
+          pintar(centrado());
+        }, instante ? 80 : 620);
+      }
+
+      function soltarControl() {
+        navegando = false;
+        clearTimeout(finViaje);
       }
 
       function parar() {
@@ -689,7 +717,7 @@
       // ---------- el scroll manda: al deslizar se actualiza el color ----------
       var pendiente = false;
       viewport.addEventListener('scroll', function () {
-        if (pendiente) return;
+        if (navegando || pendiente) return;
         pendiente = true;
         window.requestAnimationFrame(function () {
           pendiente = false;
@@ -697,9 +725,10 @@
         });
       }, { passive: true });
 
-      // el primer gesto del visitante detiene el pase automatico
-      ['pointerdown', 'touchstart', 'wheel', 'keydown'].forEach(function (t) {
-        viewport.addEventListener(t, parar, { passive: true });
+      // si el visitante toca el carrusel, manda su gesto: se corta el
+      // viaje programado y se detiene el pase automatico
+      ['pointerdown', 'touchstart', 'wheel'].forEach(function (t) {
+        viewport.addEventListener(t, function () { soltarControl(); parar(); }, { passive: true });
       });
 
       // ---------- controles ----------
