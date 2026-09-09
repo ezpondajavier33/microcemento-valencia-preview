@@ -199,7 +199,20 @@ ol {
 /* --------------------------------------------------------------
    3. Tipografia
    -------------------------------------------------------------- */
-h1,
+/* Ojo: los titulares de paginas interiores llevan acentos y ñ, que la
+   tipografia propia no dibuja. Por eso el h1 general va en la serif y
+   SA Triumph se reserva para textos que controlamos (portada, etiquetas,
+   navegacion y cifras). */
+h1 {
+  font-family: var(--font-serif);
+  font-optical-sizing: auto;
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
 .display {
   font-family: var(--font-display);
   font-weight: 400;
@@ -4244,4 +4257,37 @@ html.js .hero--cinema.is-live .hero__bg video {
 .legal p + ul,
 .legal ul + p {
   margin-top: var(--sp-2);
+}
+
+
+/* ==============================================================
+   34. Titulares de paginas interiores en la serif editorial
+   ============================================================== */
+h1 em {
+  display: block;
+  font-family: var(--font-serif);
+  font-style: italic;
+  text-transform: none;
+}
+
+.page-hero h1 {
+  font-size: clamp(2.05rem, 1.2rem + 2.7vw, 3.5rem);
+  line-height: 1.05;
+  max-width: 20ch;
+}
+
+/* la portada mantiene la tipografia propia, que ahi el texto lo controlamos */
+.hero__title .t-line {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  line-height: 0.96;
+}
+
+.hero__title .t-mid {
+  font-family: var(--font-serif);
+}
+
+.error-page .code {
+  font-family: var(--font-display);
 }

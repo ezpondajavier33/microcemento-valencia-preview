@@ -16,7 +16,7 @@
   // FORM-PENDIENTE
   // ------------------------------------------------------------------
   var FORM_ENDPOINT = '';
-  var FALLBACK_EMAIL = 'info@microcementovalencia.es';
+  var FALLBACK_EMAIL = 'JRmicrocementovalencia@gmail.com';
 
   var qs = function (s, c) { return (c || document).querySelector(s); };
   var qsa = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
