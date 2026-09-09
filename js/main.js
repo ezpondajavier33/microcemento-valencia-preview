@@ -614,6 +614,7 @@
   function initPaleta() {
     qsa('[data-paleta]').forEach(function (raiz) {
       var pista = qs('[data-paleta-pista]', raiz);
+      var viewport = pista.parentElement;
       var muestra = qs('[data-paleta-muestra]', raiz);
       var puntos = qsa('.paleta__punto', pista);
       if (!puntos.length) return;
@@ -623,17 +624,19 @@
       var nombre = qs('[data-paleta-nombre]', raiz);
       var familia = qs('[data-paleta-familia]', raiz);
       var nota = qs('[data-paleta-nota]', raiz);
+
       var activo = 0;
+      var desplazamiento = 0; // posicion actual de la pista, en px
       var auto = null;
       var tocado = false;
 
-      function pintar(i, mover) {
+      // ---------- pintado ----------
+      function pintar(i, centrarTambien) {
         activo = Math.max(0, Math.min(puntos.length - 1, i));
         var el = puntos[activo];
 
         puntos.forEach(function (p, n) {
           var d = Math.abs(n - activo);
-          // el del centro manda; los laterales se van encogiendo y apagando
           var escala = d === 0 ? 1.5 : d === 1 ? 1.08 : d === 2 ? 0.92 : d === 3 ? 0.82 : 0.74;
           var opacidad = d === 0 ? 1 : d === 1 ? 0.8 : d === 2 ? 0.55 : d === 3 ? 0.36 : 0.2;
           p.style.setProperty('--s', escala);
@@ -653,14 +656,29 @@
         if (nextBtn) nextBtn.disabled = activo === puntos.length - 1;
         pista.setAttribute('aria-activedescendant', el.id);
 
-        if (mover !== false) centrar();
+        if (centrarTambien !== false) centrar();
+      }
+
+      function mover(x) {
+        desplazamiento = x;
+        pista.style.transform = 'translate3d(' + x + 'px,0,0)';
       }
 
       function centrar() {
-        var viewport = pista.parentElement;
         var el = puntos[activo];
-        var x = viewport.clientWidth / 2 - (el.offsetLeft + el.offsetWidth / 2);
-        pista.style.transform = 'translate3d(' + x + 'px,0,0)';
+        mover(viewport.clientWidth / 2 - (el.offsetLeft + el.offsetWidth / 2));
+      }
+
+      // circulo cuyo centro queda mas cerca del centro del carrusel
+      function masCercano(x) {
+        var centro = viewport.clientWidth / 2;
+        var mejor = 0;
+        var dist = Infinity;
+        puntos.forEach(function (p, n) {
+          var d = Math.abs(p.offsetLeft + p.offsetWidth / 2 + x - centro);
+          if (d < dist) { dist = d; mejor = n; }
+        });
+        return mejor;
       }
 
       function parar() {
@@ -668,9 +686,18 @@
         if (auto) { clearInterval(auto); auto = null; }
       }
 
+      // ---------- controles ----------
+      var arrastrado = 0;
+
       puntos.forEach(function (p, n) {
-        p.addEventListener('click', function () { parar(); pintar(n); });
+        p.addEventListener('click', function (e) {
+          // si venia de un arrastre, no se toma como clic
+          if (arrastrado > 8) { e.preventDefault(); return; }
+          parar();
+          pintar(n);
+        });
       });
+
       if (prevBtn) prevBtn.addEventListener('click', function () { parar(); pintar(activo - 1); });
       if (nextBtn) nextBtn.addEventListener('click', function () { parar(); pintar(activo + 1); });
 
@@ -682,24 +709,80 @@
         puntos[activo].focus();
       });
 
-      // arrastre con raton o dedo
-      var x0 = null;
-      var inicio = 0;
+      // ---------- arrastre: se puede pasar de uno en uno o de varios ----------
+      var x0 = 0;
+      var y0 = 0;
+      var base = 0;
+      var eje = null;
+      var arrastrando = false;
+      var t0 = 0;
+
       pista.addEventListener('pointerdown', function (e) {
-        x0 = e.clientX; inicio = activo; parar();
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        parar();
+        x0 = e.clientX;
+        y0 = e.clientY;
+        base = desplazamiento;
+        eje = null;
+        arrastrando = true;
+        arrastrado = 0;
+        t0 = Date.now();
         pista.style.transition = 'none';
       });
-      window.addEventListener('pointermove', function (e) {
-        if (x0 === null) return;
-        var ancho = puntos[0].offsetWidth + 22;
-        pintar(inicio - Math.round((e.clientX - x0) / ancho), false);
-        centrar();
+
+      pista.addEventListener('pointermove', function (e) {
+        if (!arrastrando) return;
+        var dx = e.clientX - x0;
+        var dy = e.clientY - y0;
+
+        // hasta que no se sabe la intencion no se secuestra el gesto:
+        // asi el dedo puede seguir haciendo scroll vertical
+        if (eje === null) {
+          if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+          eje = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+          if (eje === 'x') {
+            pista.classList.add('is-dragging');
+            try { pista.setPointerCapture(e.pointerId); } catch (err) {}
+          }
+        }
+        if (eje !== 'x') return;
+
+        arrastrado = Math.abs(dx);
+        mover(base + dx);
+
+        // el color del panel acompaña al dedo mientras se arrastra
+        var cerca = masCercano(base + dx);
+        if (cerca !== activo) pintar(cerca, false);
       });
-      window.addEventListener('pointerup', function () {
-        if (x0 === null) return;
-        x0 = null;
+
+      function soltar(e) {
+        if (!arrastrando) return;
+        arrastrando = false;
+        pista.classList.remove('is-dragging');
         pista.style.transition = '';
-      });
+        if (eje !== 'x') return;
+
+        var dx = (e.clientX || x0) - x0;
+        // inercia: cuanto mas rapido el gesto, mas colores pasan
+        var v = dx / Math.max(1, Date.now() - t0);
+        pintar(masCercano(base + dx + v * 260));
+      }
+
+      pista.addEventListener('pointerup', soltar);
+      pista.addEventListener('pointercancel', soltar);
+      pista.addEventListener('lostpointercapture', function () { arrastrando = false; });
+
+      // rueda horizontal del ratón o del trackpad
+      var ruedaBloqueada = false;
+      viewport.addEventListener('wheel', function (e) {
+        if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+        e.preventDefault();
+        if (ruedaBloqueada) return;
+        ruedaBloqueada = true;
+        setTimeout(function () { ruedaBloqueada = false; }, 220);
+        parar();
+        pintar(activo + (e.deltaX > 0 ? 1 : -1));
+      }, { passive: false });
 
       window.addEventListener('resize', function () { centrar(); });
       raiz.addEventListener('mouseenter', parar);
@@ -717,7 +800,8 @@
                 pintar(activo >= puntos.length - 1 ? 0 : activo + 1);
               }, 2800);
             } else if (!e.isIntersecting && auto) {
-              clearInterval(auto); auto = null;
+              clearInterval(auto);
+              auto = null;
             }
           });
         }, { threshold: 0.35 }).observe(raiz);
