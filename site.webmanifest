@@ -2,14 +2,14 @@
   "name": "JR Microcemento Valencia",
   "short_name": "JR Microcemento",
   "description": "Aplicadores de microcemento en Valencia y l’Horta Nord.",
-  "start_url": "/",
+  "start_url": "/microcemento-valencia-preview/",
   "display": "standalone",
   "background_color": "#0b0a09",
   "theme_color": "#0b0a09",
   "lang": "es-ES",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "/microcemento-valencia-preview/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml"
     }
