@@ -4331,3 +4331,22 @@ em {
 .page-hero h1 {
   font-size: clamp(1.85rem, 1.05rem + 2.6vw, 3.4rem);
 }
+
+/* ==============================================================
+   36. El "en" del titular de portada
+   Escalaba solo con el ancho de pantalla y en movil se quedaba en
+   12 px, descolgado de las dos palabras grandes. Ahora crece con el
+   titular y respira por arriba y por abajo.
+   ============================================================== */
+.hero__title .t-mid {
+  font-size: clamp(1.4rem, 0.75rem + 2.6vw, 2.6rem);
+  line-height: 1.05;
+  margin-block: clamp(6px, 1.1vw, 14px);
+  letter-spacing: 0.01em;
+}
+
+@media (max-width: 599px) {
+  .hero__title .t-mid {
+    margin-block: 8px 6px;
+  }
+}

@@ -526,20 +526,29 @@
       var i = 0;
       setInterval(function () {
         i = (i + 1) % words.length;
+
         var next = document.createElement('span');
         next.textContent = words[i];
         host.appendChild(next);
         host.style.width = widths[i] + 'px';
+
+        // se guarda la palabra saliente ANTES de mover el puntero:
+        // si se lee current dentro del rAF ya apunta a la nueva y se
+        // marcaria como saliente a si misma, dejando el hueco vacio
+        var prev = current;
+        current = next;
+
         window.requestAnimationFrame(function () {
           window.requestAnimationFrame(function () {
             next.classList.add('is-in');
-            current.classList.remove('is-in');
-            current.classList.add('is-out');
+            prev.classList.remove('is-in');
+            prev.classList.add('is-out');
           });
         });
-        var old = current;
-        current = next;
-        setTimeout(function () { if (old.parentNode) old.parentNode.removeChild(old); }, 700);
+
+        setTimeout(function () {
+          if (prev.parentNode) prev.parentNode.removeChild(prev);
+        }, 700);
       }, 3200);
     });
   }
