@@ -5031,3 +5031,77 @@ em {
 .paleta__viewport {
   overscroll-behavior-x: contain;
 }
+
+
+/* ==============================================================
+   42. Carrusel de colores con scroll nativo
+   El arrastre programado a mano no respondia en moviles reales.
+   Con scroll nativo y anclaje, el gesto lo maneja el sistema: hay
+   inercia, se puede pasar de uno en uno o de varios, y sigue
+   funcionando el clic, las flechas y el teclado.
+   ============================================================== */
+.paleta__viewport {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  touch-action: pan-x pan-y;
+  cursor: grab;
+}
+
+.paleta__viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.paleta__viewport.is-dragging {
+  cursor: grabbing;
+  scroll-behavior: auto;
+  scroll-snap-type: none;
+}
+
+/* la pista ya no se mueve por transform: la mueve el scroll */
+.paleta__pista {
+  transform: none !important;
+  transition: none;
+  padding-inline: calc(50% - 36px);
+  touch-action: auto;
+  cursor: inherit;
+}
+
+.paleta__punto {
+  scroll-snap-align: center;
+  scroll-snap-stop: normal;
+}
+
+@media (max-width: 700px) {
+  .paleta__pista {
+    padding-inline: calc(50% - 23px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paleta__viewport {
+    scroll-behavior: auto;
+  }
+}
+
+/* ==============================================================
+   43. El botón blanco de la portada se dora al pasar por encima
+   ============================================================== */
+.hero--cinema .btn--primary::after {
+  background: #ddbe86;
+}
+
+.hero--cinema .btn--primary:hover,
+.hero--cinema .btn--primary:focus-visible {
+  color: var(--ink);
+  border-color: #ddbe86;
+}
+
+.hero--cinema .btn--primary:hover svg,
+.hero--cinema .btn--primary:focus-visible svg {
+  color: #8a5a24;
+}

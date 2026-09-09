@@ -625,13 +625,13 @@
       var familia = qs('[data-paleta-familia]', raiz);
       var nota = qs('[data-paleta-nota]', raiz);
 
-      var activo = 0;
-      var desplazamiento = 0; // posicion actual de la pista, en px
+      var activo = -1;
       var auto = null;
       var tocado = false;
 
       // ---------- pintado ----------
-      function pintar(i, centrarTambien) {
+      function pintar(i) {
+        if (i === activo) return;
         activo = Math.max(0, Math.min(puntos.length - 1, i));
         var el = puntos[activo];
 
@@ -655,30 +655,30 @@
         if (prevBtn) prevBtn.disabled = activo === 0;
         if (nextBtn) nextBtn.disabled = activo === puntos.length - 1;
         pista.setAttribute('aria-activedescendant', el.id);
-
-        if (centrarTambien !== false) centrar();
       }
 
-      function mover(x) {
-        desplazamiento = x;
-        pista.style.transform = 'translate3d(' + x + 'px,0,0)';
-      }
-
-      function centrar() {
-        var el = puntos[activo];
-        mover(viewport.clientWidth / 2 - (el.offsetLeft + el.offsetWidth / 2));
-      }
-
-      // circulo cuyo centro queda mas cerca del centro del carrusel
-      function masCercano(x) {
-        var centro = viewport.clientWidth / 2;
+      // circulo cuyo centro queda mas cerca del centro visible
+      function centrado() {
+        var centro = viewport.scrollLeft + viewport.clientWidth / 2;
         var mejor = 0;
         var dist = Infinity;
         puntos.forEach(function (p, n) {
-          var d = Math.abs(p.offsetLeft + p.offsetWidth / 2 + x - centro);
+          var d = Math.abs(p.offsetLeft + p.offsetWidth / 2 - centro);
           if (d < dist) { dist = d; mejor = n; }
         });
         return mejor;
+      }
+
+      function irA(i, suave) {
+        i = Math.max(0, Math.min(puntos.length - 1, i));
+        var p = puntos[i];
+        var x = p.offsetLeft + p.offsetWidth / 2 - viewport.clientWidth / 2;
+        if (viewport.scrollTo) {
+          viewport.scrollTo({ left: x, behavior: suave === false || REDUCED ? 'auto' : 'smooth' });
+        } else {
+          viewport.scrollLeft = x;
+        }
+        pintar(i);
       }
 
       function parar() {
@@ -686,110 +686,79 @@
         if (auto) { clearInterval(auto); auto = null; }
       }
 
-      // ---------- controles ----------
-      var arrastrado = 0;
-
-      puntos.forEach(function (p, n) {
-        p.addEventListener('click', function (e) {
-          // si venia de un arrastre, no se toma como clic
-          if (arrastrado > 8) { e.preventDefault(); return; }
-          parar();
-          pintar(n);
+      // ---------- el scroll manda: al deslizar se actualiza el color ----------
+      var pendiente = false;
+      viewport.addEventListener('scroll', function () {
+        if (pendiente) return;
+        pendiente = true;
+        window.requestAnimationFrame(function () {
+          pendiente = false;
+          pintar(centrado());
         });
+      }, { passive: true });
+
+      // el primer gesto del visitante detiene el pase automatico
+      ['pointerdown', 'touchstart', 'wheel', 'keydown'].forEach(function (t) {
+        viewport.addEventListener(t, parar, { passive: true });
       });
 
-      if (prevBtn) prevBtn.addEventListener('click', function () { parar(); pintar(activo - 1); });
-      if (nextBtn) nextBtn.addEventListener('click', function () { parar(); pintar(activo + 1); });
+      // ---------- controles ----------
+      puntos.forEach(function (p, n) {
+        p.addEventListener('click', function () { parar(); irA(n); });
+      });
+      if (prevBtn) prevBtn.addEventListener('click', function () { parar(); irA(activo - 1); });
+      if (nextBtn) nextBtn.addEventListener('click', function () { parar(); irA(activo + 1); });
 
       pista.addEventListener('keydown', function (e) {
         if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
         e.preventDefault();
         parar();
-        pintar(activo + (e.key === 'ArrowRight' ? 1 : -1));
-        puntos[activo].focus();
+        irA(activo + (e.key === 'ArrowRight' ? 1 : -1));
+        puntos[activo].focus({ preventScroll: true });
       });
 
-      // ---------- arrastre: se puede pasar de uno en uno o de varios ----------
-      var x0 = 0;
-      var y0 = 0;
-      var base = 0;
-      var eje = null;
+      // arrastre con el raton (el dedo ya tiene el scroll nativo)
       var arrastrando = false;
-      var t0 = 0;
+      var x0 = 0;
+      var scroll0 = 0;
+      var movido = 0;
 
-      pista.addEventListener('pointerdown', function (e) {
-        if (e.pointerType === 'mouse' && e.button !== 0) return;
-        parar();
-        x0 = e.clientX;
-        y0 = e.clientY;
-        base = desplazamiento;
-        eje = null;
+      viewport.addEventListener('pointerdown', function (e) {
+        if (e.pointerType !== 'mouse' || e.button !== 0) return;
         arrastrando = true;
-        arrastrado = 0;
-        t0 = Date.now();
-        pista.style.transition = 'none';
+        movido = 0;
+        x0 = e.clientX;
+        scroll0 = viewport.scrollLeft;
+        viewport.classList.add('is-dragging');
       });
 
-      pista.addEventListener('pointermove', function (e) {
+      window.addEventListener('pointermove', function (e) {
         if (!arrastrando) return;
         var dx = e.clientX - x0;
-        var dy = e.clientY - y0;
-
-        // hasta que no se sabe la intencion no se secuestra el gesto:
-        // asi el dedo puede seguir haciendo scroll vertical
-        if (eje === null) {
-          if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
-          eje = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-          if (eje === 'x') {
-            pista.classList.add('is-dragging');
-            try { pista.setPointerCapture(e.pointerId); } catch (err) {}
-          }
-        }
-        if (eje !== 'x') return;
-
-        arrastrado = Math.abs(dx);
-        mover(base + dx);
-
-        // el color del panel acompaña al dedo mientras se arrastra
-        var cerca = masCercano(base + dx);
-        if (cerca !== activo) pintar(cerca, false);
+        movido = Math.abs(dx);
+        viewport.scrollLeft = scroll0 - dx;
       });
 
-      function soltar(e) {
+      window.addEventListener('pointerup', function () {
         if (!arrastrando) return;
         arrastrando = false;
-        pista.classList.remove('is-dragging');
-        pista.style.transition = '';
-        if (eje !== 'x') return;
+        viewport.classList.remove('is-dragging');
+        if (movido > 8) irA(centrado());
+      });
 
-        var dx = (e.clientX || x0) - x0;
-        // inercia: cuanto mas rapido el gesto, mas colores pasan
-        var v = dx / Math.max(1, Date.now() - t0);
-        pintar(masCercano(base + dx + v * 260));
-      }
+      // un arrastre con el raton no debe contar como clic en el circulo
+      viewport.addEventListener('click', function (e) {
+        if (movido > 8) { e.preventDefault(); e.stopPropagation(); movido = 0; }
+      }, true);
 
-      pista.addEventListener('pointerup', soltar);
-      pista.addEventListener('pointercancel', soltar);
-      pista.addEventListener('lostpointercapture', function () { arrastrando = false; });
-
-      // rueda horizontal del ratón o del trackpad
-      var ruedaBloqueada = false;
-      viewport.addEventListener('wheel', function (e) {
-        if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
-        e.preventDefault();
-        if (ruedaBloqueada) return;
-        ruedaBloqueada = true;
-        setTimeout(function () { ruedaBloqueada = false; }, 220);
-        parar();
-        pintar(activo + (e.deltaX > 0 ? 1 : -1));
-      }, { passive: false });
-
-      window.addEventListener('resize', function () { centrar(); });
+      window.addEventListener('resize', function () { irA(activo, false); });
       raiz.addEventListener('mouseenter', parar);
 
-      pintar(Math.min(4, puntos.length - 1));
-      // se recentra cuando las fuentes cambian el ancho de las etiquetas
-      if (document.fonts && document.fonts.ready) document.fonts.ready.then(centrar);
+      // arranque
+      irA(Math.min(4, puntos.length - 1), false);
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(function () { irA(activo, false); });
+      }
 
       // pase automatico hasta que el visitante interactua
       if (!REDUCED && 'IntersectionObserver' in window) {
@@ -797,7 +766,7 @@
           es.forEach(function (e) {
             if (e.isIntersecting && !tocado && !auto) {
               auto = setInterval(function () {
-                pintar(activo >= puntos.length - 1 ? 0 : activo + 1);
+                irA(activo >= puntos.length - 1 ? 0 : activo + 1);
               }, 2800);
             } else if (!e.isIntersecting && auto) {
               clearInterval(auto);
