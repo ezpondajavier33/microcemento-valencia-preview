@@ -4291,3 +4291,43 @@ h1 em {
 .error-page .code {
   font-family: var(--font-display);
 }
+
+/* ==============================================================
+   35. Serif con más cuerpo: Bodoni Moda tiene un contraste muy alto
+   y en pantalla los trazos finos se perdían. Se baja el eje de
+   tamaño óptico (opsz) para usar el corte de texto, más robusto,
+   y se sube el peso.
+   ============================================================== */
+h1,
+h2,
+.display-serif,
+.cta-band h2 {
+  font-weight: 700;
+  font-optical-sizing: none;
+  font-variation-settings: "opsz" 10;
+  letter-spacing: -0.012em;
+}
+
+/* piezas serif de tamaño medio */
+.post-card__body h3,
+.prose blockquote,
+.callout b,
+.reel figcaption b,
+.hero__title .t-mid,
+.serif-accent,
+em {
+  font-weight: 600;
+  font-optical-sizing: none;
+  font-variation-settings: "opsz" 12;
+}
+
+/* la cursiva de la portada, algo más presente sobre el vídeo */
+.hero__title .t-mid {
+  font-weight: 600;
+  font-variation-settings: "opsz" 14;
+}
+
+/* con más peso la serif ocupa más: se ajusta el titular en móvil */
+.page-hero h1 {
+  font-size: clamp(1.85rem, 1.05rem + 2.6vw, 3.4rem);
+}
