@@ -609,6 +609,123 @@
   }
 
   // ------------------------------------------------------------------
+  // 9 quater. Carta de colores: carrusel con el color activo en el centro
+  // ------------------------------------------------------------------
+  function initPaleta() {
+    qsa('[data-paleta]').forEach(function (raiz) {
+      var pista = qs('[data-paleta-pista]', raiz);
+      var muestra = qs('[data-paleta-muestra]', raiz);
+      var puntos = qsa('.paleta__punto', pista);
+      if (!puntos.length) return;
+
+      var prevBtn = qs('[data-paleta-prev]', raiz);
+      var nextBtn = qs('[data-paleta-next]', raiz);
+      var nombre = qs('[data-paleta-nombre]', raiz);
+      var familia = qs('[data-paleta-familia]', raiz);
+      var nota = qs('[data-paleta-nota]', raiz);
+      var activo = 0;
+      var auto = null;
+      var tocado = false;
+
+      function pintar(i, mover) {
+        activo = Math.max(0, Math.min(puntos.length - 1, i));
+        var el = puntos[activo];
+
+        puntos.forEach(function (p, n) {
+          var d = Math.abs(n - activo);
+          // el del centro manda; los laterales se van encogiendo y apagando
+          var escala = d === 0 ? 1.5 : d === 1 ? 1.08 : d === 2 ? 0.92 : d === 3 ? 0.82 : 0.74;
+          var opacidad = d === 0 ? 1 : d === 1 ? 0.8 : d === 2 ? 0.55 : d === 3 ? 0.36 : 0.2;
+          p.style.setProperty('--s', escala);
+          p.style.setProperty('--o', opacidad);
+          p.setAttribute('aria-selected', n === activo ? 'true' : 'false');
+          p.tabIndex = n === activo ? 0 : -1;
+        });
+
+        if (muestra) {
+          muestra.style.setProperty('--c', el.dataset.hex);
+          muestra.classList.toggle('is-claro', el.dataset.claro === '1');
+        }
+        if (nombre) nombre.textContent = el.dataset.nombre;
+        if (familia) familia.textContent = el.dataset.familia;
+        if (nota) nota.textContent = el.dataset.nota;
+        if (prevBtn) prevBtn.disabled = activo === 0;
+        if (nextBtn) nextBtn.disabled = activo === puntos.length - 1;
+        pista.setAttribute('aria-activedescendant', el.id);
+
+        if (mover !== false) centrar();
+      }
+
+      function centrar() {
+        var viewport = pista.parentElement;
+        var el = puntos[activo];
+        var x = viewport.clientWidth / 2 - (el.offsetLeft + el.offsetWidth / 2);
+        pista.style.transform = 'translate3d(' + x + 'px,0,0)';
+      }
+
+      function parar() {
+        tocado = true;
+        if (auto) { clearInterval(auto); auto = null; }
+      }
+
+      puntos.forEach(function (p, n) {
+        p.addEventListener('click', function () { parar(); pintar(n); });
+      });
+      if (prevBtn) prevBtn.addEventListener('click', function () { parar(); pintar(activo - 1); });
+      if (nextBtn) nextBtn.addEventListener('click', function () { parar(); pintar(activo + 1); });
+
+      pista.addEventListener('keydown', function (e) {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        parar();
+        pintar(activo + (e.key === 'ArrowRight' ? 1 : -1));
+        puntos[activo].focus();
+      });
+
+      // arrastre con raton o dedo
+      var x0 = null;
+      var inicio = 0;
+      pista.addEventListener('pointerdown', function (e) {
+        x0 = e.clientX; inicio = activo; parar();
+        pista.style.transition = 'none';
+      });
+      window.addEventListener('pointermove', function (e) {
+        if (x0 === null) return;
+        var ancho = puntos[0].offsetWidth + 22;
+        pintar(inicio - Math.round((e.clientX - x0) / ancho), false);
+        centrar();
+      });
+      window.addEventListener('pointerup', function () {
+        if (x0 === null) return;
+        x0 = null;
+        pista.style.transition = '';
+      });
+
+      window.addEventListener('resize', function () { centrar(); });
+      raiz.addEventListener('mouseenter', parar);
+
+      pintar(Math.min(4, puntos.length - 1));
+      // se recentra cuando las fuentes cambian el ancho de las etiquetas
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(centrar);
+
+      // pase automatico hasta que el visitante interactua
+      if (!REDUCED && 'IntersectionObserver' in window) {
+        new IntersectionObserver(function (es) {
+          es.forEach(function (e) {
+            if (e.isIntersecting && !tocado && !auto) {
+              auto = setInterval(function () {
+                pintar(activo >= puntos.length - 1 ? 0 : activo + 1);
+              }, 2800);
+            } else if (!e.isIntersecting && auto) {
+              clearInterval(auto); auto = null;
+            }
+          });
+        }, { threshold: 0.35 }).observe(raiz);
+      }
+    });
+  }
+
+  // ------------------------------------------------------------------
   // 10. Marquesina en bucle
   // ------------------------------------------------------------------
   function initMarquee() {
@@ -740,6 +857,7 @@
     initHero();
     initRotator();
     initVideos();
+    initPaleta();
     initForms();
     initAnchors();
   });
