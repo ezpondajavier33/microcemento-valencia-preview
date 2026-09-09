@@ -4914,3 +4914,68 @@ em {
     flex: 1 1 100%;
   }
 }
+
+
+/* ==============================================================
+   40. Ajustes de móvil pedidos por el cliente
+   ============================================================== */
+
+/* el botón de color, en terracota lleno: en pantalla pequeña el estilo
+   traslúcido se perdía sobre el vídeo */
+@media (max-width: 859px) {
+  .hero--cinema .btn--color,
+  .btn--color {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--cream);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .btn--color svg {
+    color: var(--cream);
+  }
+
+  .btn--color::after {
+    background: #8a4826;
+  }
+}
+
+/* la carta de colores abre el desplegable de servicios del menú móvil */
+.mnav-color {
+  display: flex !important;
+  align-items: center;
+  gap: 14px;
+  margin: 6px 0 16px;
+  padding: 16px 18px !important;
+  border-radius: var(--r-md);
+  background: var(--accent);
+  color: var(--cream) !important;
+  transition: background-color 0.3s var(--ease);
+}
+
+.mnav-color:hover {
+  background: #8a4826;
+  color: var(--cream) !important;
+}
+
+.mnav-color__t {
+  display: block;
+  font-size: 1.08rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.mnav-color__t small {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: rgba(243, 239, 231, 0.72);
+  margin-top: 2px;
+}
+
+.mnav-color .mega__puntos i {
+  width: 17px;
+  height: 17px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2), 0 0 0 1.5px rgba(243, 239, 231, 0.6);
+}
