@@ -1,0 +1,3 @@
+# Vista previa para el cliente. Todas las paginas llevan noindex.
+User-agent: *
+Allow: /
