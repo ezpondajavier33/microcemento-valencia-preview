@@ -1852,11 +1852,16 @@ a.chip:hover {
 @media (min-width: 900px) {
   .gallery {
     grid-template-columns: repeat(4, 1fr);
+    grid-auto-flow: dense;
   }
   .gallery figure:first-child,
   .gallery figure:nth-child(6) {
     grid-column: span 2;
     grid-row: span 2;
+  }
+  /* la segunda pieza grande va a la derecha: zigzag sin huecos */
+  .gallery figure:nth-child(6) {
+    grid-column: 3 / span 2;
   }
 }
 
